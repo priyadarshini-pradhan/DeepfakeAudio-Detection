@@ -31,6 +31,7 @@ model = load_model(MODEL_PATH, compile=False)
 
 print("Model Loaded Successfully!")
 print("Output Shape:", model.output_shape)
+print("Input Shape:", model.input_shape)
 print(type(model))
 
 # -----------------------------
@@ -76,11 +77,18 @@ def predict():
 
         audio, sr = sf.read(filepath)
 
+        # Stereo to Mono
         if len(audio.shape) > 1:
             audio = np.mean(audio, axis=1)
 
+        # Convert sampling rate to 22050 if needed
         if sr != 22050:
-            raise Exception(f"Sampling rate is {sr}, expected 22050")
+            audio = librosa.resample(
+                audio,
+                orig_sr=sr,
+                target_sr=22050
+            )
+            sr = 22050
 
         print("AUDIO SHAPE:", audio.shape)
         print("SAMPLING RATE:", sr)
