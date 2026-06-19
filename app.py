@@ -72,7 +72,16 @@ def predict():
         # -----------------------------
         # Load audio (SAFE METHOD)
         # -----------------------------
-        audio, sr = librosa.load(filepath, sr=22050, mono=True)
+        import soundfile as sf
+
+        audio, sr = sf.read(filepath)
+
+        if len(audio.shape) > 1:
+            audio = np.mean(audio, axis=1)
+
+        if sr != 22050:
+            audio = librosa.resample(audio, orig_sr=sr, target_sr=22050)
+            sr = 22050
 
         print("AUDIO SHAPE:", audio.shape)
         print("SAMPLING RATE:", sr)
