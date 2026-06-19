@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DeepFake Audio Detection</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <h3>Analyzing Audio...</h3>
+</div>
+
+<div class="main-container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>🎙 DeepFake Audio Detector</h1>
+        <p>This system detects AI-generated DeepFake audio using MFCC feature extraction and a CNN model</p>
+    </div>
+
+    <!-- UPLOAD CARD -->
+    <div class="card">
+
+        <form action="/predict" method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
+
+            <label class="upload-box">
+                <input type="file" name="audio" required>
+                <span>📁 Click to Upload Audio File</span>
+            </label>
+
+            <button type="submit">Detect Audio</button>
+
+        </form>
+
+    </div>
+
+    <!-- RESULT CARD -->
+    {% if prediction %}
+
+    <div class="card result">
+
+        <h2>{{ prediction }}</h2>
+
+        <div class="confidence">
+            Confidence: {{ confidence }}%
+        </div>
+
+        <audio controls>
+            <source src="{{ audio_file }}" type="audio/wav">
+        </audio>
+
+        <h3>Waveform</h3>
+
+        <img src="{{ url_for('static', filename=waveform_image) }}" width="100%">
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+function showLoading() {
+    document.getElementById("loading").style.display = "flex";
+}
+</script>
+
+</body>
+</html>
