@@ -80,8 +80,7 @@ def predict():
             audio = np.mean(audio, axis=1)
 
         if sr != 22050:
-            audio = librosa.resample(audio, orig_sr=sr, target_sr=22050)
-            sr = 22050
+            raise Exception(f"Sampling rate is {sr}, expected 22050")
 
         print("AUDIO SHAPE:", audio.shape)
         print("SAMPLING RATE:", sr)
