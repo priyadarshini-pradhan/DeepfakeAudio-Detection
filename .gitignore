@@ -1,7 +1,33 @@
-DataSet/
-Features/
-Results/
+# Python
 __pycache__/
 *.pyc
-venv/
 .venv/
+
+# Large datasets and generated feature arrays
+DataSet/
+Features/
+*.npy
+
+# Uploaded/test audio files
+static/uploads/
+*.wav
+*.flac
+
+# Generated runtime files
+static/waveform.png
+
+# TensorFlow/Keras model files
+Models/*.keras
+
+# Temporary/generated files
+*.log
+# Intermediate/old result files
+Results/V2/
+Results/accuracy_graph.png
+Results/classification_report.txt
+Results/confusion_matrix.png
+Results/evaluation_confusion_matrix.png
+Results/evaluation_report.txt
+Results/metrics.txt
+Results/prediction_details.csv
+Results/roc_curve.png

@@ -1,0 +1,62 @@
+DEEPFAKE AUDIO DETECTION
+FINAL MODEL RESULTS
+
+Dataset:
+ASVspoof 2019 Logical Access (LA)
+
+Final Model:
+V2 - 2D CNN with temporal MFCC representation
+
+Input Representation:
+40 MFCC coefficients × 400 time frames
+
+Official Evaluation:
+Total samples: 71,237
+Bonafide: 7,355
+Spoof: 63,882
+
+V1 MODEL RESULTS
+Accuracy: 80.50%
+Precision (Spoof): 97.06%
+Recall (Spoof): 80.70%
+F1-score (Spoof): 88.13%
+ROC-AUC: 87.54%
+EER: 20.11%
+
+V2 MODEL RESULTS
+Accuracy: 89.44%
+Precision (Spoof): 99.61%
+Recall (Spoof): 88.57%
+F1-score (Spoof): 93.76%
+ROC-AUC: 98.09%
+EER: 7.51%
+
+V2 CONFUSION MATRIX
+
+                    Predicted
+                 Bonafide   Spoof
+Actual Bonafide    7131      224
+Actual Spoof       7302    56580
+
+V2 ATTACK-WISE ROC-AUC
+
+A07: 0.9997
+A08: 0.9928
+A09: 0.9999
+A10: 0.9987
+A11: 0.9995
+A12: 0.9992
+A13: 0.9985
+A14: 0.9978
+A15: 0.9982
+A16: 0.9993
+A17: 0.8538
+A18: 0.9246
+A19: 0.9900
+
+V2 VALIDATION RESULTS
+
+Validation Accuracy: 99.94%
+
+Note:
+The official evaluation results above are used as the final performance results.

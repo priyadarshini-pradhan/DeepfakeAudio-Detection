@@ -1,9 +1,11 @@
 import os
 import traceback
+
 os.environ["NUMBA_DISABLE_JIT"] = "1"
 
 import matplotlib
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 
 from flask import Flask, render_template, request, url_for
@@ -11,158 +13,445 @@ from werkzeug.utils import secure_filename
 
 import numpy as np
 import librosa
-import tensorflow as tf
+import soundfile as sf
+
 from tensorflow.keras.models import load_model
 
-# -----------------------------
+
+# ==========================================
 # Flask App Configuration
-# -----------------------------
+# ==========================================
+
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB upload limit
+
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 
 UPLOAD_FOLDER = "static/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# -----------------------------
-# Load Model
-# -----------------------------
-MODEL_PATH = "Models/deepfake_cnn.keras"
-model = load_model(MODEL_PATH, compile=False)
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
 
-print("Model Loaded Successfully!")
-print("Output Shape:", model.output_shape)
+
+# ==========================================
+# V2 Parameters
+# ==========================================
+
+N_MFCC = 40
+MAX_SECONDS = 5
+MAX_FRAMES = 400
+
+
+# ==========================================
+# Load V2 Model
+# ==========================================
+
+MODEL_PATH = "Models/deepfake_cnn_v2.keras"
+
+model = load_model(
+    MODEL_PATH,
+    compile=False
+)
+
+print("================================")
+print("V2 MODEL LOADED SUCCESSFULLY")
+print("================================")
+
+print("Model Path:", MODEL_PATH)
 print("Input Shape:", model.input_shape)
-print(type(model))
+print("Output Shape:", model.output_shape)
 
-# -----------------------------
+
+# ==========================================
 # Home
-# -----------------------------
+# ==========================================
+
 @app.route("/")
 def home():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html"
+    )
 
 
-# -----------------------------
+# ==========================================
 # Prediction Route
-# -----------------------------
-@app.route("/predict", methods=["POST"])
+# ==========================================
+
+@app.route(
+    "/predict",
+    methods=["POST"]
+)
 def predict():
 
     try:
-        # -----------------------------
-        # File check
-        # -----------------------------
+
+        # ==================================
+        # Check uploaded file
+        # ==================================
+
         if "audio" not in request.files:
+
             return "No audio file uploaded."
 
         file = request.files["audio"]
 
         if file.filename == "":
+
             return "No file selected."
 
-        # -----------------------------
-        # Save file
-        # -----------------------------
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
+
+        # ==================================
+        # Save uploaded file
+        # ==================================
+
+        filename = secure_filename(
+            file.filename
+        )
+
+        filepath = os.path.join(
+            UPLOAD_FOLDER,
+            filename
+        )
+
         file.save(filepath)
 
-        print("FILE SAVED:", filepath)
-        print("FILE EXISTS:", os.path.exists(filepath))
+        print("\n================================")
+        print("NEW AUDIO FILE")
+        print("================================")
 
-        # -----------------------------
-        # Load audio (SAFE METHOD)
-        # -----------------------------
-        import soundfile as sf
+        print(
+            "FILE SAVED:",
+            filepath
+        )
 
-        audio, sr = sf.read(filepath)
 
-        # Stereo to Mono
+        # ==================================
+        # Load audio
+        # ==================================
+
+        audio, sr = sf.read(
+            filepath
+        )
+
+
+        # Stereo → Mono
+
         if len(audio.shape) > 1:
-            audio = np.mean(audio, axis=1)
 
-        # Convert sampling rate to 22050 if needed
-        if sr != 22050:
-            audio = librosa.resample(
+            audio = np.mean(
                 audio,
-                orig_sr=sr,
-                target_sr=22050
+                axis=1
             )
-            sr = 22050
 
-        print("AUDIO SHAPE:", audio.shape)
-        print("SAMPLING RATE:", sr)
 
-        # Trim to 5 sec
-        max_length = sr * 5
+        audio = audio.astype(
+            np.float32
+        )
+
+
+        print(
+            "Original Audio Shape:",
+            audio.shape
+        )
+
+        print(
+            "Sampling Rate:",
+            sr
+        )
+
+
+        # ==================================
+        # Keep original sample rate
+        # ==================================
+        #
+        # IMPORTANT:
+        # V2 training/evaluation did NOT
+        # resample the audio.
+        #
+
+        if sr != 16000:
+
+            print(
+                "WARNING: Unexpected "
+                f"sampling rate: {sr}"
+            )
+
+
+        # ==================================
+        # Trim to first 5 seconds
+        # ==================================
+
+        max_length = (
+            sr * MAX_SECONDS
+        )
+
         if len(audio) > max_length:
-            audio = audio[:max_length]
 
-        # -----------------------------
+            audio = audio[
+                :max_length
+            ]
+
+
+        print(
+            "Trimmed Audio Shape:",
+            audio.shape
+        )
+
+
+        # ==================================
         # Waveform
-        # -----------------------------
-        plt.figure(figsize=(10, 3))
+        # ==================================
+
+        plt.figure(
+            figsize=(10, 3)
+        )
+
         plt.plot(audio)
-        plt.title("Audio Waveform")
 
-        waveform_filename = "waveform.png"
-        waveform_path = os.path.join(app.static_folder, waveform_filename)
+        plt.title(
+            "Audio Waveform"
+        )
 
-        plt.savefig(waveform_path, bbox_inches="tight")
+        plt.xlabel(
+            "Samples"
+        )
+
+        plt.ylabel(
+            "Amplitude"
+        )
+
+        waveform_filename = (
+            "waveform.png"
+        )
+
+        waveform_path = os.path.join(
+            app.static_folder,
+            waveform_filename
+        )
+
+        plt.savefig(
+            waveform_path,
+            bbox_inches="tight"
+        )
+
         plt.close()
 
-        print("Waveform saved:", os.path.exists(waveform_path))
+        print(
+            "Waveform saved:",
+            waveform_path
+        )
 
-        # -----------------------------
-        # MFCC (TEMP FIX - DEBUG SAFE)
-        # -----------------------------
+
+        # ==================================
+        # V2 MFCC Extraction
+        # ==================================
+
         mfcc = librosa.feature.mfcc(
             y=audio,
             sr=sr,
-            n_mfcc=40
+            n_mfcc=N_MFCC
         )
 
-        print("MFCC SHAPE:", mfcc.shape)
+        print(
+            "Original MFCC Shape:",
+            mfcc.shape
+        )
 
-        mfcc = np.mean(mfcc.T, axis=0)
-        mfcc = mfcc.reshape(1, 40, 1)
 
-        print("FINAL MFCC INPUT SHAPE:", mfcc.shape)
+        # ==================================
+        # Pad / Crop to 400 frames
+        # ==================================
 
-        # -----------------------------
+        if mfcc.shape[1] < MAX_FRAMES:
+
+            pad_width = (
+                MAX_FRAMES -
+                mfcc.shape[1]
+            )
+
+            mfcc = np.pad(
+                mfcc,
+                (
+                    (0, 0),
+                    (0, pad_width)
+                ),
+                mode="constant"
+            )
+
+        else:
+
+            mfcc = mfcc[
+                :,
+                :MAX_FRAMES
+            ]
+
+
+        print(
+            "MFCC Shape after "
+            "padding/cropping:",
+            mfcc.shape
+        )
+
+
+        # ==================================
+        # Add channel dimension
+        # ==================================
+
+        mfcc = mfcc[
+            ...,
+            np.newaxis
+        ]
+
+
+        # ==================================
+        # Add batch dimension
+        # ==================================
+
+        mfcc = mfcc[
+            np.newaxis,
+            ...
+        ]
+
+
+        print(
+            "FINAL V2 INPUT SHAPE:",
+            mfcc.shape
+        )
+
+
+        # Expected:
+        #
+        # (1, 40, 400, 1)
+
+
+        # ==================================
         # Prediction
-        # -----------------------------
-        prediction = model.predict(mfcc, verbose=0)
+        # ==================================
 
-        print("PREDICTION:", prediction)
+        prediction = model.predict(
+            mfcc,
+            verbose=0
+        )
 
-        label = np.argmax(prediction)
-        confidence = round(float(np.max(prediction)) * 100, 2)
 
-        result = "REAL AUDIO" if label == 0 else "FAKE AUDIO"
+        print(
+            "PREDICTION:",
+            prediction
+        )
 
-        # -----------------------------
-        # Output file path
-        # -----------------------------
-        audio_file = url_for("static", filename="uploads/" + filename)
+
+        # ==================================
+        # Class
+        # ==================================
+
+        label = np.argmax(
+            prediction
+        )
+
+
+        # Class 0 = Bonafide
+        # Class 1 = Spoof
+
+        bonafide_score = float(
+            prediction[0][0]
+        )
+
+        spoof_score = float(
+            prediction[0][1]
+        )
+
+
+        # ==================================
+        # Result
+        # ==================================
+
+        if label == 0:
+
+            result = "REAL AUDIO"
+
+            confidence = round(
+                bonafide_score * 100,
+                2
+            )
+
+        else:
+
+            result = "FAKE AUDIO"
+
+            confidence = round(
+                spoof_score * 100,
+                2
+            )
+
+
+        print(
+            "RESULT:",
+            result
+        )
+
+        print(
+            "Confidence:",
+            confidence,
+            "%"
+        )
+
+
+        # ==================================
+        # Audio URL
+        # ==================================
+
+        audio_file = url_for(
+            "static",
+            filename=(
+                "uploads/" + filename
+            )
+        )
+
+
+        # ==================================
+        # Return Result
+        # ==================================
 
         return render_template(
             "index.html",
             prediction=result,
             confidence=confidence,
             audio_file=audio_file,
-            waveform_image=waveform_filename,
+            waveform_image=waveform_filename
         )
 
+
     except Exception as e:
-        print("ERROR OCCURRED:")
+
+        print(
+            "ERROR OCCURRED:"
+        )
+
         traceback.print_exc()
-        return f"<pre>{traceback.format_exc()}</pre>"
+
+        return (
+            f"<pre>"
+            f"{traceback.format_exc()}"
+            f"</pre>"
+        )
 
 
-# -----------------------------
-# Run App
-# -----------------------------
+# ==========================================
+# Run Flask App
+# ==========================================
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )

@@ -1,0 +1,97 @@
+DEEPFAKE AUDIO DETECTION SYSTEM
+METHODOLOGY
+
+1. Dataset Collection
+
+The system uses the ASVspoof 2019 Logical Access (LA) dataset.
+The training data contains bonafide and spoofed speech samples.
+The evaluation data contains bonafide samples and spoofing attacks
+from attack categories A07 to A19.
+
+2. Audio Preprocessing
+
+Each audio sample is loaded using the SoundFile library.
+Stereo audio is converted into mono audio.
+The first five seconds of the audio are considered for processing.
+The original 16 kHz sampling rate of the ASVspoof audio is retained.
+
+3. MFCC Feature Extraction
+
+Mel-Frequency Cepstral Coefficients (MFCCs) are extracted from
+each audio sample using the Librosa library.
+
+A total of 40 MFCC coefficients are extracted.
+
+4. Fixed-Size Feature Representation
+
+The extracted MFCC features have different numbers of time frames.
+To provide a fixed-size input to the CNN, the time dimension is
+padded or cropped to 400 frames.
+
+Therefore, each input is represented as:
+
+40 × 400 MFCC matrix
+
+5. Deep Learning Model
+
+A 2D Convolutional Neural Network (CNN) is used for classification.
+
+The model consists of:
+
+- Conv2D layer with 32 filters
+- Batch Normalization
+- Max Pooling
+- Conv2D layer with 64 filters
+- Batch Normalization
+- Max Pooling
+- Conv2D layer with 128 filters
+- Batch Normalization
+- Max Pooling
+- Global Average Pooling
+- Dense layer with 128 neurons
+- Dropout layer with rate 0.5
+- Softmax output layer with two classes
+
+6. Classification
+
+The model performs binary classification:
+
+Class 0: Bonafide / Real Audio
+Class 1: Spoof / Fake Audio
+
+The softmax output is used to determine the predicted class
+and the corresponding confidence score.
+
+7. Web Application
+
+A Flask-based web application provides the user interface.
+
+The user can upload an audio file and the system performs:
+
+Audio Upload
+→ Preprocessing
+→ MFCC Extraction
+→ CNN Prediction
+→ Classification Result
+
+The application displays:
+
+- REAL AUDIO or FAKE AUDIO
+- Confidence score
+- Audio waveform visualization
+
+8. Evaluation
+
+The final model is evaluated using the official ASVspoof 2019
+LA evaluation set.
+
+The evaluation includes:
+
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- ROC-AUC
+- Equal Error Rate (EER)
+- Confusion Matrix
+- Attack-wise ROC-AUC
